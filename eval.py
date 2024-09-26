@@ -70,13 +70,35 @@ def filter_predictions(prediction_df, task):
 
   return prediction_df
 
+def process_likelihood(likelihood_str: str) -> List[float]:
+    # clean the string to remove unwanted characters
+    print(f"Raw Likelihood String: {likelihood_str}") 
+    clean_str = likelihood_str.replace('tensor(', '').replace(')', '').strip()  # remove 'tensor(' and ')'
+    clean_str = clean_str.replace('[[', '').replace(']]', '').strip()  # remove extra brackets
+    clean_str = clean_str.replace(" device='cuda:0'", '').replace(" dtype=torch.float16", '').strip()  # remove device and dtype info
+    clean_str = clean_str.replace('tensor', '').strip()  # remove any instances of 'tensor'
+    
+    # remove any empty strings caused by extra commas
+    clean_str = clean_str.replace(',,', ',')  # remove duplicate commas if they exist
+    
+    # debugging output for verification
+    print(f"Processed String: {clean_str}")  # debugging line
+    
+    # Convert to a list of floats
+    likelihood = [float(x) for x in clean_str.split(',') if x.strip()]  # ensure non-empty strings are converted
+    return likelihood
+
+
+
 def loglikelihoods_to_predictions(log_likelihoods: List[float], labels: List[str]) -> List[str]:
     predictions = []
 
     for likelihoods in log_likelihoods:
+      if isinstance(likelihoods,list):
         predicted_label_idx = np.argmax(likelihoods)
         predictions.append(labels[predicted_label_idx])
-
+      else:
+         print(f"Invalid likelihood format: {likelihoods}")
     return predictions
 
 def compute_f1_and_accuracy(predictions: List[str], ground_truths: List[str], labels: List[str]) -> (float, float):
@@ -109,7 +131,8 @@ def main(csv_file_path):
             labels=["Kyakkyawa","Tsaka-tsaki","Korau"]
           else:
             labels=["0","1","2"]
-          likelihood = [float(x) for x in row['Log-Likelihood'].strip('[]').split(',')]
+          # likelihood = [float(x) for x in row['Log-Likelihood'].strip('[]').split(',')]
+          likelihood =process_likelihood(row['Log-Likelihood'])
           log_likelihoods.append(likelihood)
           ground_truths.append(row['Targets'])
 

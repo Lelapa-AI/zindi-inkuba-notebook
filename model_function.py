@@ -3,6 +3,7 @@ import time
 import csv
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
+import numpy as np
 
 
 # Function to load the model for text generation
@@ -110,8 +111,18 @@ def main(
               with torch.no_grad():
                   logits = model(**batch).logits
                   log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
+                  s_labels = torch.tensor([0, 1, 2]).cuda() 
+                  # probs =torch.exp(log_probs)
                   generated_tokens = outputs[:, len(batch['input_ids'][0]):]
-                  log_likelihood = log_probs.gather(2, generated_tokens.unsqueeze(-1)).squeeze(-1).sum().item()
+                  log_likelihoods_per_class = log_probs.gather(2, s_labels.view(1, 1, -1)).squeeze(1)
+                  # log_likelihoods_summed = log_likelihoods_per_class.sum(dim=1).detach().cpu().numpy()
+                  #  # Convert log-likelihoods to class predictions using np.argmax
+                  # predicted_class_idx = np.argmax(log_likelihoods_summed, axis=-1)
+
+                  # # Map the predicted index back to the sentiment label (0 -> "negative", 1 -> "neutral", 2 -> "positive")
+                  # labels = ["negative", "neutral", "positive"]
+                  # predicted_class = labels[predicted_class_idx]
+                  # log_likelihood = log_probs.gather(2, generated_tokens.unsqueeze(-1)).squeeze(-1).sum().item()
             else:
-              log_likelihood = []
-            writer.writerow([identity, instruction, input_text, output_text, log_likelihood, labels, task, langs])  # Save ground truth
+              log_likelihoods_per_class = []
+            writer.writerow([identity, instruction, input_text, output_text, log_likelihoods_per_class, labels, task, langs])  # Save ground truth
