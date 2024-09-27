@@ -107,22 +107,19 @@ def main(
 
             output_text = tokenizer.decode(outputs[0], skip_special_tokens=True)[len(user_prompt):]
 
-            if task !="mmt":
-              with torch.no_grad():
-                  logits = model(**batch).logits
-                  log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
-                  s_labels = torch.tensor([0, 1, 2]).cuda() 
-                  # probs =torch.exp(log_probs)
-                  generated_tokens = outputs[:, len(batch['input_ids'][0]):]
-                  log_likelihoods_per_class = log_probs.gather(2, s_labels.view(1, 1, -1)).squeeze(1)
-                  # log_likelihoods_summed = log_likelihoods_per_class.sum(dim=1).detach().cpu().numpy()
-                  #  # Convert log-likelihoods to class predictions using np.argmax
-                  # predicted_class_idx = np.argmax(log_likelihoods_summed, axis=-1)
+            if task != "mmt":
+                with torch.no_grad():
+                    logits = model(**batch).logits  # Shape: [batch_size, seq_length, vocab_size]
+                    log_probs = torch.nn.functional.log_softmax(logits, dim=-1)  # Shape: [batch_size, seq_length, vocab_size]
 
-                  # # Map the predicted index back to the sentiment label (0 -> "negative", 1 -> "neutral", 2 -> "positive")
-                  # labels = ["negative", "neutral", "positive"]
-                  # predicted_class = labels[predicted_class_idx]
-                  # log_likelihood = log_probs.gather(2, generated_tokens.unsqueeze(-1)).squeeze(-1).sum().item()
+                    # compute the log-likelihood of the target tokens
+                    t_labels = torch.tensor([0, 1, 2]).unsqueeze(0).unsqueeze(0).expand(batch['input_ids'].size(0), batch['input_ids'].size(1), -1).to(model.device)
+
+                    # Gathering log-likelihoods for the labels
+                    log_likelihoods_per_class = log_probs.gather(2, t_labels)  # Shape: [batch_size, seq_length, 3]
+                    
+                    #sum or average over the sequence to get a final score
+                    log_likelihoods_per_class = log_likelihoods_per_class.mean(dim=1)  # Shape: [batch_size, 3]
             else:
-              log_likelihoods_per_class = []
+                log_likelihoods_per_class = []
             writer.writerow([identity, instruction, input_text, output_text, log_likelihoods_per_class, labels, task, langs])  # Save ground truth
