@@ -12,6 +12,7 @@ def evaluate_zindi(csv_file_path):
         y_true_sent = []
         y_pred_xnli = []
         y_true_xnli = []
+        chrfs_scores = []
 
         for row in reader:
             if "sent" in row["ID"] or "xnli" in row["ID"]:
@@ -23,7 +24,7 @@ def evaluate_zindi(csv_file_path):
                     labels = ["0", "1", "2"]
 
                 # Use the output of process_likelihood directly
-                predicted_label = row["Response"]
+                predicted_label = int(row["Response"])
                 label_to_id = {label: i for i, label in enumerate(labels)}
 
                 if "xnli" in row["ID"]:
@@ -37,7 +38,7 @@ def evaluate_zindi(csv_file_path):
                 chrf_pred = row["Response"]
                 chrf_true = row["Targets"]
                 chrfs = chrF(reference=chrf_true, hypothesis=chrf_pred)
-                scores.append(chrfs)
+                chrfs_scores.append(chrfs)
 
         # F1 score for sentiment
         f1_sent = calculate_f1(np.array(y_true_sent), np.array(y_pred_sent), 3)
@@ -45,6 +46,10 @@ def evaluate_zindi(csv_file_path):
         # F1 score for xnli
         f1_xnli = calculate_f1(np.array(y_true_xnli), np.array(y_pred_xnli), 3)
         scores.append(f1_xnli)
+        # chrF score for mt
+        chrfs_score = np.mean(chrfs_scores)
+        scores.append(chrfs_score)
+
         # Zindi score: Average of all performances
         zindi_score = np.mean(scores)
 
