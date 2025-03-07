@@ -25,6 +25,7 @@ def evaluate_zindi(csv_file_path):
 
                 # Use the output of process_likelihood directly
                 predicted_label = int(row["Response"])
+
                 # Assert the predicted label is within the valid range [0, 1, 2]
                 assert predicted_label in [0, 1, 2], (
                     f"Invalid predicted label {predicted_label} for ID {row['ID']}"
