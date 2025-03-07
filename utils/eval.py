@@ -25,6 +25,11 @@ def evaluate_zindi(csv_file_path):
 
                 # Use the output of process_likelihood directly
                 predicted_label = int(row["Response"])
+                # Assert the predicted label is within the valid range [0, 1, 2]
+                assert predicted_label in [0, 1, 2], (
+                    f"Invalid predicted label {predicted_label} for ID {row['ID']}"
+                )
+
                 label_to_id = {label: i for i, label in enumerate(labels)}
 
                 if "xnli" in row["ID"]:
@@ -52,10 +57,6 @@ def evaluate_zindi(csv_file_path):
 
         # Zindi score: Average of all performances
         zindi_score = np.mean(scores)
-
-    # Round to 4 decimal places and multiply by 100
-    zindi_score = round(zindi_score, 4)
-    zindi_score *= 100
 
     return zindi_score
 
